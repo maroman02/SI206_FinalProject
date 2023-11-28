@@ -1,9 +1,4 @@
-# Used to collect players stats, both current and historical from https://www.balldontlie.io/home.html#introduction
-
-import unittest
 import sqlite3
-import requests
-import json
 import os
 
 
@@ -25,20 +20,3 @@ def create_2015_player_table(cur):
 # Creates 2020 player table with pts, assists, rebounds, position
 def create_2020_player_table(cur):
     cur.execute('CREATE')
-
-# Returns data from API
-def get_json_obj(url, params):
-    try: 
-        r = requests.get(url, params)
-        r.raise_for_status()
-        return r.json()
-    
-    except:
-        print('Exception!')
-        return None
-    
-
-
-    
-
-    
