@@ -1,5 +1,5 @@
 # Refer to Final Project Plan doc for guide
-# Used for collecting player backgrounds via Beautiful Soup from https://www.nba.com/players
+# Used for collecting all-star players via Beautiful Soup from https://www.nba.com/news/history-nba-all-star-game
 
 from bs4 import BeautifulSoup
 import re

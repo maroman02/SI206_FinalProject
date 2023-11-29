@@ -1,3 +1,4 @@
+# Refer to Final Project Plan doc for guide
 # Used to collect players stats, both current and historical from https://www.balldontlie.io/home.html#introduction
 
 import unittest
