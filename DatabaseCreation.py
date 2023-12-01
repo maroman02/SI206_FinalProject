@@ -37,16 +37,18 @@ def id_for_player(year_dict):
         for player in year:
             r = requests.get('https://www.balldontlie.io/api/v1/players', params={'search': player})
             player_data = r.json()
-            id = player_data['data'][0]['id']
+            id = int(player_data['data'][0]['id'])
             player_id_dict[player] = id
 
     return player_id_dict
 
-def get_player_stats(year_dict):
+def get_player_stats(year_dict, player_id_dict):
     player_stats_by_year = {}
     for year in year_dict:
-        pass
-
+        for player in year:
+            params = {'season': year, 'player_ids': [player_id_dict[player]]}
+            r = requests.get('https://www.balldontlie.io/api/v1/season_averages', params=params)
+    
 
 def insertData(cur, conn, year_dict):
     pass
