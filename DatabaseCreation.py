@@ -68,10 +68,37 @@ def get_player_stats(year_dict, player_id_dict):
         player_stats_by_year[year] = dict_of_player_stats
 
 
-def insertData(cur, conn, player_stats_by_year, player_id_dict, player_position_dict):
-    for year in player_stats_by_year:
-        for player in year:
-            insertion_tuple = (str(year) + '_Info', player_id_dict[player], player, player_position_dict[player], player_stats_by_year[year][player][0], player_stats_by_year[year][player][1], player_stats_by_year[year][player][2])
-            cur.execute('INSERT OR IGNORE INTO ? (id, name, position, pts, ast, games_played) VALUES (?, ?, ?, ?, ?, ?, ?)', (insertion_tuple))
+def insertData_2000(cur, conn, player_stats_by_year, player_id_dict, player_position_dict):
+    for player in player_stats_by_year[2000]:
+        insertion_tuple = (player_id_dict[player], player, player_position_dict[player], player_stats_by_year[2000][player][0], player_stats_by_year[2000][player][1], player_stats_by_year[2000][player][2])
+        cur.execute('INSERT OR IGNORE INTO 2000_Info (id, name, position, pts, ast, games_played) VALUES (?, ?, ?, ?, ?, ?)', (insertion_tuple))
 
     conn.commit()
+
+def insertData_2005(cur, conn, player_stats_by_year, player_id_dict, player_position_dict):
+    for player in player_stats_by_year[2005]:
+        insertion_tuple = (player_id_dict[player], player, player_position_dict[player], player_stats_by_year[2005][player][0], player_stats_by_year[2005][player][1], player_stats_by_year[2005][player][2])
+        cur.execute('INSERT OR IGNORE INTO 2005_Info (id, name, position, pts, ast, games_played) VALUES (?, ?, ?, ?, ?, ?)', (insertion_tuple))
+
+    conn.commit()
+
+def insertData_2010(cur, conn, player_stats_by_year, player_id_dict, player_position_dict):
+    for player in player_stats_by_year[2010]:
+        insertion_tuple = (player_id_dict[player], player, player_position_dict[player], player_stats_by_year[2010][player][0], player_stats_by_year[2010][player][1], player_stats_by_year[2010][player][2])
+        cur.execute('INSERT OR IGNORE INTO 2010_Info (id, name, position, pts, ast, games_played) VALUES (?, ?, ?, ?, ?, ?)', (insertion_tuple))
+
+    conn.commit()
+def insertData_2015(cur, conn, player_stats_by_year, player_id_dict, player_position_dict):
+    for player in player_stats_by_year[2015]:
+        insertion_tuple = (player_id_dict[player], player, player_position_dict[player], player_stats_by_year[2015][player][0], player_stats_by_year[2015][player][1], player_stats_by_year[2015][player][2])
+        cur.execute('INSERT OR IGNORE INTO 2015_Info (id, name, position, pts, ast, games_played) VALUES (?, ?, ?, ?, ?, ?)', (insertion_tuple))
+    
+    conn.commit()
+
+def insertData_2020(cur, conn, player_stats_by_year, player_id_dict, player_position_dict):
+    for player in player_stats_by_year[2020]:
+        insertion_tuple = (player_id_dict[player], player, player_position_dict[player], player_stats_by_year[2020][player][0], player_stats_by_year[2020][player][1], player_stats_by_year[2020][player][2])
+        cur.execute('INSERT OR IGNORE INTO 2020_Info (id, name, position, pts, ast, games_played) VALUES (?, ?, ?, ?, ?, ?)', (insertion_tuple))
+    
+    conn.commit()
+
