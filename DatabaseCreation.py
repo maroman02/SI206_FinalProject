@@ -71,8 +71,7 @@ def get_player_stats(year_dict, player_id_dict):
 def insertData(cur, conn, player_stats_by_year, player_id_dict, player_position_dict):
     for year in player_stats_by_year:
         for player in year:
-            insertion_tuple = (str(year) + '_Info', player_id_dict[player], player_position_dict[player], player_stats_by_year[year][player][0], player_stats_by_year[year][player][1], player_stats_by_year[year][player][2])
-            cur.execute('INSERT OR IGNORE INTO ? (id, name, position, pts, ast, games_played) VALUES (?, ?, ?, ?, ?, ?)', (insertion_tuple))
+            insertion_tuple = (str(year) + '_Info', player_id_dict[player], player, player_position_dict[player], player_stats_by_year[year][player][0], player_stats_by_year[year][player][1], player_stats_by_year[year][player][2])
+            cur.execute('INSERT OR IGNORE INTO ? (id, name, position, pts, ast, games_played) VALUES (?, ?, ?, ?, ?, ?, ?)', (insertion_tuple))
 
     conn.commit()
-    # Newest
