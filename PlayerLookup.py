@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 import re
 import requests
 import unittest
-import sqlite3
 
 # Returns dictionary with key year and value list of all all-star players. Years considered are 2020, 2015, 2010, 2005, 2000 via https://www.landofbasketball.com/allstargames/year_by_year_results.htm
 def get_all_stars(years):

@@ -3,7 +3,6 @@
 
 import unittest
 import requests
-import json
 import os
 from DatabaseCreation import *
 import plotly.graph_objects as go
