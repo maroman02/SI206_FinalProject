@@ -3,6 +3,7 @@
 import sqlite3
 import os
 from PlayerLookup import *
+import time
 
 
 # Create SQLite Database to store data
@@ -12,93 +13,205 @@ def set_up_database(db_name):
     cur = conn.cursor()
     return cur, conn
 
-# Creates tables with all-star player stats from each year in [2000, 2005, 2010, 2015, 2020]
-def create_all_stars_tables(cur, conn):
+# Create player lookup table
+def create_player_lookup_table(cur, conn):
+    cur.execute('CREATE TABLE IF NOT EXISTS Player_Info (id INTEGER PRIMARY KEY, name TEXT, position TEXT)')
+    conn.commit()
+
+def insert_player_lookup_table(cur, conn, player_id_dict, player_position_dict):
+    for player in player_id_dict:
+        cur.execute('INSERT OR IGNORE INTO Player_Info (id, name, position) VALUES (?, ?, ?)', (player_id_dict[player], player, player_position_dict[player]))
+
+    conn.commit()
+
+# Creates tables with all-star player stats from each year in [1995, 2000, 2005, 2010, 2015, 2020]
+def create_stats_tables(cur, conn):
+    # Creates 1995 player table with pts, assists, position
+    cur.execute('CREATE TABLE IF NOT EXISTS Info_1995 (id INTEGER, pts NUMERIC, ast NUMERIC, games_played INTEGER)')
+
     # Creates 2000 player table with pts, assists, position
-    cur.execute('CREATE TABLE IF NOT EXISTS 2000_Info (id INTEGER PRIMARY KEY name TEXT position TEXT pts NUMERIC ast NUMERIC games_played NUMERIC)')
+    cur.execute('CREATE TABLE IF NOT EXISTS Info_2000 (id INTEGER, pts NUMERIC, ast NUMERIC, games_played INTEGER)')
 
     # Creates 2005 player table with pts, assists, position
-    cur.execute('CREATE TABLE IF NOT EXISTS 2005_Info (id INTEGER PRIMARY KEY name TEXT position TEXT pts NUMERIC ast NUMERIC games_played NUMERIC)')
+    cur.execute('CREATE TABLE IF NOT EXISTS Info_2005 (id INTEGER, pts NUMERIC, ast NUMERIC, games_played INTEGER)')
 
     # Creates 2010 player table with pts, assists, position
-    cur.execute('CREATE TABLE IF NOT EXISTS 2010_Info (id INTEGER PRIMARY KEY name TEXT position TEXT pts NUMERIC ast NUMERIC games_played NUMERIC)')
+    cur.execute('CREATE TABLE IF NOT EXISTS Info_2010 (id INTEGER, pts NUMERIC, ast NUMERIC, games_played INTEGER)')
 
     # Creates 2015 player table with pts, assists, position
-    cur.execute('CREATE TABLE IF NOT EXISTS 2015_Info (id INTEGER PRIMARY KEY name TEXT position TEXT pts NUMERIC ast NUMERIC games_played NUMERIC)')
+    cur.execute('CREATE TABLE IF NOT EXISTS Info_2015 (id INTEGER, pts NUMERIC, ast NUMERIC, games_played INTEGER)')
 
     # Creates 2020 player table with pts, assists, position
-    cur.execute('CREATE TABLE IF NOT EXISTS 2020_Info (id INTEGER PRIMARY KEY name TEXT position TEXT pts NUMERIC ast NUMERIC games_played NUMERIC)')
+    cur.execute('CREATE TABLE IF NOT EXISTS Info_2020 (id INTEGER, pts NUMERIC, ast NUMERIC, games_played INTEGER)')
     
     conn.commit()
 
-def id_for_player(year_dict):
+def id_pos_for_player(all_stars_by_year):
     player_id_dict = {}
-    for year in year_dict:
-        for player in year:
+    ids_by_year = {}
+    player_position_dict = {}
+    for year in all_stars_by_year:
+        ids = []
+        for player in all_stars_by_year[year]:
+            if player in player_id_dict:
+                ids.append(player_id_dict[player])
+                continue
+            if player == 'Manu Ginóbili':
+                player = 'Manu Ginobili'
+            elif player == 'Luka Dončić':
+                player = 'Luka Doncic'
+            elif player == 'Nikola Jokić':
+                player = 'Nikola Jokic'
             r = requests.get('https://www.balldontlie.io/api/v1/players', params={'search': player})
             player_data = r.json()
             id = int(player_data['data'][0]['id'])
+            ids.append(id)
+
+            position_raw = player_data['data'][0]['position']
+            if position_raw != '':
+                position = position_raw[0]
+            else:
+                position = position_raw
             player_id_dict[player] = id
+            player_position_dict[player] = position
 
-    return player_id_dict
+            time.sleep(0.8)
 
-def position_for_player(player_id_dict):
-    player_position_dict = {}
-    for player in player_id_dict:
-        r = requests.get('https://www.balldontlie.io/api/v1/players/' + str(player_id_dict[player]))
-        player_data = r.json()
-        position = player_data['data'][0]['position']
-        player_position_dict[player] = position
+        ids_by_year[year] = ids
 
-    return player_position_dict
+    return player_id_dict, player_position_dict, ids_by_year
 
-def get_player_stats(year_dict, player_id_dict):
-    player_stats_by_year = {}
-    for year in year_dict:
-        dict_of_player_stats = {}
-        for player in year:
-            params = {'season': year, 'player_ids': [player_id_dict[player]]}
-            r = requests.get('https://www.balldontlie.io/api/v1/season_averages', params=params)
-            raw_data = r.json()
-            pts = float(raw_data['data'][0]['pts'])
-            ast = float(raw_data['data'][0]['ast'])
-            games_played = int(raw_data['data'][0]['games_played'])
-            player_stats = [pts, ast, games_played]
-            dict_of_player_stats[player] = player_stats
-        player_stats_by_year[year] = dict_of_player_stats
+def get_player_stats_1995(ids_by_year):
+    dict_of_player_stats = {}
+    params = {'season': 1995, 'player_ids[]': ids_by_year[1995]}
+    r = requests.get('https://www.balldontlie.io/api/v1/season_averages', params=params)
+    raw_data = r.json()
+    for player in raw_data['data']:
+        pts = float(player['pts'])
+        ast = float(player['ast'])
+        games_played = int(player['games_played'])
+        player_stats = [pts, ast, games_played]
+        dict_of_player_stats[player['player_id']] = player_stats
+
+    return dict_of_player_stats
 
 
-def insertData_2000(cur, conn, player_stats_by_year, player_id_dict, player_position_dict):
-    for player in player_stats_by_year[2000]:
-        insertion_tuple = (player_id_dict[player], player, player_position_dict[player], player_stats_by_year[2000][player][0], player_stats_by_year[2000][player][1], player_stats_by_year[2000][player][2])
-        cur.execute('INSERT OR IGNORE INTO 2000_Info (id, name, position, pts, ast, games_played) VALUES (?, ?, ?, ?, ?, ?)', (insertion_tuple))
+def get_player_stats_2000(ids_by_year):
+    dict_of_player_stats = {}
+    params = {'season': 2000, 'player_ids[]': ids_by_year[2000]}
+    r = requests.get('https://www.balldontlie.io/api/v1/season_averages', params=params)
+    raw_data = r.json()
+    for player in raw_data['data']:
+        pts = float(player['pts'])
+        ast = float(player['ast'])
+        games_played = int(player['games_played'])
+        player_stats = [pts, ast, games_played]
+        dict_of_player_stats[player['player_id']] = player_stats
+
+    return dict_of_player_stats
+
+def get_player_stats_2005(ids_by_year):
+    dict_of_player_stats = {}
+    params = {'season': 2005, 'player_ids[]': ids_by_year[2005]}
+    r = requests.get('https://www.balldontlie.io/api/v1/season_averages', params=params)
+    raw_data = r.json()
+    for player in raw_data['data']:
+        pts = float(player['pts'])
+        ast = float(player['ast'])
+        games_played = int(player['games_played'])
+        player_stats = [pts, ast, games_played]
+        dict_of_player_stats[player['player_id']] = player_stats
+
+    return dict_of_player_stats
+
+def get_player_stats_2010(ids_by_year):
+    dict_of_player_stats = {}
+    params = {'season': 2010, 'player_ids[]': ids_by_year[2010]}
+    r = requests.get('https://www.balldontlie.io/api/v1/season_averages', params=params)
+    raw_data = r.json()
+    for player in raw_data['data']:
+        pts = float(player['pts'])
+        ast = float(player['ast'])
+        games_played = int(player['games_played'])
+        player_stats = [pts, ast, games_played]
+        dict_of_player_stats[player['player_id']] = player_stats
+
+    return dict_of_player_stats
+
+def get_player_stats_2015(ids_by_year):
+    dict_of_player_stats = {}
+    params = {'season': 2015, 'player_ids[]': ids_by_year[2015]}
+    r = requests.get('https://www.balldontlie.io/api/v1/season_averages', params=params)
+    raw_data = r.json()
+    for player in raw_data['data']:
+        pts = float(player['pts'])
+        ast = float(player['ast'])
+        games_played = int(player['games_played'])
+        player_stats = [pts, ast, games_played]
+        dict_of_player_stats[player['player_id']] = player_stats
+
+    return dict_of_player_stats
+
+def get_player_stats_2020(ids_by_year):
+    dict_of_player_stats = {}
+    params = {'season': 2020, 'player_ids[]': ids_by_year[2020]}
+    r = requests.get('https://www.balldontlie.io/api/v1/season_averages', params=params)
+    raw_data = r.json()
+    for player in raw_data['data']:
+        pts = float(player['pts'])
+        ast = float(player['ast'])
+        games_played = int(player['games_played'])
+        player_stats = [pts, ast, games_played]
+        dict_of_player_stats[player['player_id']] = player_stats
+
+    return dict_of_player_stats
+
+
+def insertData_1995(cur, conn, dict_of_player_stats):
+    for id in dict_of_player_stats:
+        insertion_tuple = (id, dict_of_player_stats[id][0], dict_of_player_stats[id][1], dict_of_player_stats[id][2])
+        cur.execute('INSERT OR IGNORE INTO Info_1995 (id, pts, ast, games_played) VALUES (?, ?, ?, ?)', (insertion_tuple))
 
     conn.commit()
 
-def insertData_2005(cur, conn, player_stats_by_year, player_id_dict, player_position_dict):
-    for player in player_stats_by_year[2005]:
-        insertion_tuple = (player_id_dict[player], player, player_position_dict[player], player_stats_by_year[2005][player][0], player_stats_by_year[2005][player][1], player_stats_by_year[2005][player][2])
-        cur.execute('INSERT OR IGNORE INTO 2005_Info (id, name, position, pts, ast, games_played) VALUES (?, ?, ?, ?, ?, ?)', (insertion_tuple))
+def insertData_2000(cur, conn, dict_of_player_stats):
+    for id in dict_of_player_stats:
+        insertion_tuple = (id, dict_of_player_stats[id][0], dict_of_player_stats[id][1], dict_of_player_stats[id][2])
+        cur.execute('INSERT OR IGNORE INTO Info_2000 (id, pts, ast, games_played) VALUES (?, ?, ?, ?)', (insertion_tuple))
 
     conn.commit()
 
-def insertData_2010(cur, conn, player_stats_by_year, player_id_dict, player_position_dict):
-    for player in player_stats_by_year[2010]:
-        insertion_tuple = (player_id_dict[player], player, player_position_dict[player], player_stats_by_year[2010][player][0], player_stats_by_year[2010][player][1], player_stats_by_year[2010][player][2])
-        cur.execute('INSERT OR IGNORE INTO 2010_Info (id, name, position, pts, ast, games_played) VALUES (?, ?, ?, ?, ?, ?)', (insertion_tuple))
+def insertData_2005(cur, conn, dict_of_player_stats):
+    for id in dict_of_player_stats:
+        insertion_tuple = (id, dict_of_player_stats[id][0], dict_of_player_stats[id][1], dict_of_player_stats[id][2])
+        cur.execute('INSERT OR IGNORE INTO Info_2005 (id, pts, ast, games_played) VALUES (?, ?, ?, ?)', (insertion_tuple))
 
     conn.commit()
-def insertData_2015(cur, conn, player_stats_by_year, player_id_dict, player_position_dict):
-    for player in player_stats_by_year[2015]:
-        insertion_tuple = (player_id_dict[player], player, player_position_dict[player], player_stats_by_year[2015][player][0], player_stats_by_year[2015][player][1], player_stats_by_year[2015][player][2])
-        cur.execute('INSERT OR IGNORE INTO 2015_Info (id, name, position, pts, ast, games_played) VALUES (?, ?, ?, ?, ?, ?)', (insertion_tuple))
-    
+
+def insertData_2010(cur, conn, dict_of_player_stats):
+    for id in dict_of_player_stats:
+        insertion_tuple = (id, dict_of_player_stats[id][0], dict_of_player_stats[id][1], dict_of_player_stats[id][2])
+        cur.execute('INSERT OR IGNORE INTO Info_2010 (id, pts, ast, games_played) VALUES (?, ?, ?, ?)', (insertion_tuple))
+
     conn.commit()
 
-def insertData_2020(cur, conn, player_stats_by_year, player_id_dict, player_position_dict):
-    for player in player_stats_by_year[2020]:
-        insertion_tuple = (player_id_dict[player], player, player_position_dict[player], player_stats_by_year[2020][player][0], player_stats_by_year[2020][player][1], player_stats_by_year[2020][player][2])
-        cur.execute('INSERT OR IGNORE INTO 2020_Info (id, name, position, pts, ast, games_played) VALUES (?, ?, ?, ?, ?, ?)', (insertion_tuple))
-    
+def insertData_2015(cur, conn, dict_of_player_stats):
+    for id in dict_of_player_stats:
+        insertion_tuple = (id, dict_of_player_stats[id][0], dict_of_player_stats[id][1], dict_of_player_stats[id][2])
+        cur.execute('INSERT OR IGNORE INTO Info_2015 (id, pts, ast, games_played) VALUES (?, ?, ?, ?)', (insertion_tuple))
+
     conn.commit()
 
+def insertData_2020(cur, conn, dict_of_player_stats):
+    for id in dict_of_player_stats:
+        insertion_tuple = (id, dict_of_player_stats[id][0], dict_of_player_stats[id][1], dict_of_player_stats[id][2])
+        cur.execute('INSERT OR IGNORE INTO Info_2020 (id, pts, ast, games_played) VALUES (?, ?, ?, ?)', (insertion_tuple))
+
+    conn.commit()
+
+
+def main():
+    pass
+
+if __name__ == '__main__':
+    main()
