@@ -10,17 +10,17 @@ import plotly.graph_objects as go
 def avg_assists_by_pos(cur):
     avg_assists_pos_dict = {}
     cur.execute('''SELECT Player_Info.position, AVG(Info_2010.ast) AS average_ast FROM Player_Info JOIN Info_2010 ON Player_Info.id = Info_2010.id 
-                    WHERE Player_Info.position = G OR Player_Info.position = F or Player_Info.position = C GROUP BY Player_Info.position''')
+                    WHERE Player_Info.position = 'G' OR Player_Info.position = 'F' or Player_Info.position = 'C' GROUP BY Player_Info.position''')
     res = cur.fetchall()
     avg_assists_pos_dict['2010'] = dict(res)
 
     cur.execute('''SELECT Player_Info.position, AVG(Info_2015.ast) AS average_ast FROM Player_Info JOIN Info_2015 ON Player_Info.id = Info_2015.id 
-                    WHERE Player_Info.position = G OR Player_Info.position = F or Player_Info.position = C GROUP BY Player_Info.position''')
+                    WHERE Player_Info.position = 'G' OR Player_Info.position = 'F' or Player_Info.position = 'C' GROUP BY Player_Info.position''')
     res = cur.fetchall()
     avg_assists_pos_dict['2015'] = dict(res)
 
     cur.execute('''SELECT Player_Info.position, AVG(Info_2020.ast) AS average_ast FROM Player_Info JOIN Info_2020 ON Player_Info.id = Info_2020.id 
-                    WHERE Player_Info.position = G OR Player_Info.position = F or Player_Info.position = C GROUP BY Player_Info.position''')
+                    WHERE Player_Info.position = 'G' OR Player_Info.position = 'F' or Player_Info.position = 'C' GROUP BY Player_Info.position''')
     res = cur.fetchall()
     avg_assists_pos_dict['2020'] = dict(res)
 
@@ -47,7 +47,7 @@ def make_avg_assists_vis(avg_assists_pos_dict, years):
 
 def ppg_for_players_in_2015_and_2020(cur):
     cur.execute('''SELECT Player_Info.name, ((Info_2020.ppg + Info_2015.ppg) / 2) AS ppg_average FROM Player_Info 
-                JOIN 2020_Info ON Player_Info.id = 2020_Info.id JOIN 2015_Info ON 2020_Info.id = 2015_Info.id SORT BY ppg_average DESC LIMIT 5''')
+                JOIN Info_2020 ON Player_Info.id = Info_2020.id JOIN Info_2015 ON Info_2020.id = Info_2015.id ORDER BY ppg_average DESC LIMIT 5''')
     res = cur.fetchall()
     names, ppg_avg = zip(*res)
     fig = go.Figure(
@@ -58,7 +58,7 @@ def ppg_for_players_in_2015_and_2020(cur):
 
 
 def games_played_across_years(cur):
-    cur.execute('SELECT name, games_played FROM 2000_Info')
+    cur.execute('SELECT name, games_played FROM Info_2000')
     results_1995 = dict(cur.fetchall())
     games_played_dict = results_1995
     # Sets up dictionary with players as keys and games played from 1995 as values. Values will end up being accumulated games played from all seasons they appeared in.
@@ -154,22 +154,72 @@ def games_played_across_years(cur):
 
     plot.update_layout(barmode='stack')
     plot.show()
+    
+def games_played_across_years2(cur):
+   # Fetch games played and player id for each year
+    years = ['1995', '2000', '2005', '2010', '2015', '2020']
+
+    # Initialize a dictionary to store total games played for each player and each year
+    games_played_dict = {}
+
+    for year in years:
+        cur.execute(f"SELECT id, games_played FROM Info_{year}")
+        year_results = dict(cur.fetchall())
+
+        # Process games played results for each year
+        for player_id, games_played in year_results.items():
+            if player_id not in games_played_dict:
+                games_played_dict[player_id] = {year: games_played}
+            else:
+                games_played_dict[player_id][year] = games_played_dict[player_id].get(year, 0) + games_played
+
+    # Fetch player names corresponding to player ids
+    player_names = {}
+    cur.execute('SELECT id, name FROM Player_Info')
+    player_info_results = dict(cur.fetchall())
+    for player_id in games_played_dict.keys():
+        if player_id in player_info_results:
+            player_names[player_id] = player_info_results[player_id]
+
+    # Sort players by total games played
+    sort_games_played = sorted(games_played_dict.items(), key=lambda t: sum(t[1].values()), reverse=True)
+
+    # Get top 5 player names and total games played
+    top_players = sort_games_played[:5]
+    player_ids, total_games_played = zip(*top_players)
+    player_names_top5 = [player_names[player_id] for player_id in player_ids]
+
+    # Create and show the plot
+    plot = go.Figure(data=[go.Bar(
+        name=f'{year} games played',
+        x=player_names_top5,
+        y=[games_played_dict[player_id].get(year, 0) for player_id in player_ids]
+    ) for year in years])
+
+    plot.update_layout(barmode='stack', title='Top 5 Players by Total Games Played Across Years')
+    plot.show()
+
 
 def main():
     # Sets up connection to the database
     cur, conn = set_up_database('NBA All-Star Info')
-
+    
+    
+    
     # Used to make assist by position visualization for three years of data (2010, 2015, 2020)
     years_for_ast_vis = ['2010', '2015', '2020']
     avg_ast_pos_dict = avg_assists_by_pos(cur)
     make_avg_assists_vis(avg_ast_pos_dict, years_for_ast_vis)
+    
+    
 
     # Used to make top 5 all-star players by average points per game from 2015 and 2020 seasons
-    ppg_for_players_in_2015_and_2020(cur)
+    # ppg_for_players_in_2015_and_2020(cur)
 
     # Used to make top 5 playes by games played plot - stacked with amount of games played in each year [1995, 2000, 2005, 2010, 2015, 2020]
-    games_played_across_years(cur)
-
+    games_played_across_years2(cur)
+    
+    
 
 if __name__ == '__main__':
     main()
