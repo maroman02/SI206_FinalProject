@@ -18,9 +18,16 @@ def create_player_lookup_table(cur, conn):
     cur.execute('CREATE TABLE IF NOT EXISTS Player_Info (id INTEGER PRIMARY KEY, name TEXT, position TEXT)')
     conn.commit()
 
-def insert_player_lookup_table(cur, conn, player_id_dict, player_position_dict):
-    for player in player_id_dict:
-        cur.execute('INSERT OR IGNORE INTO Player_Info (id, name, position) VALUES (?, ?, ?)', (player_id_dict[player], player, player_position_dict[player]))
+def insert_player_lookup_table(cur, conn, player_id_dict, player_position_dict, batch_size=25):
+    cur.execute('SELECT MAX(id) FROM Player_Info')
+    last_inserted_id = cur.fetchone()[0] or 0
+
+    player_list = [(player, player_id_dict[player], player_position_dict[player]) for player in player_id_dict if player_id_dict[player] > last_inserted_id]
+    player_list.sort(key=lambda x: x[1])
+
+    for i in range(0, min(batch_size, len(player_list))):
+        player, player_id, position = player_list[i]
+        cur.execute('INSERT OR IGNORE INTO Player_Info (id, name, position) VALUES (?, ?, ?)', (player_id, player, position))
 
     conn.commit()
 

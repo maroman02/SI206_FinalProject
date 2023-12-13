@@ -11,8 +11,8 @@ def main():
     all_stars_by_year = get_all_stars(years)
     player_id_dict, player_position_dict, ids_by_year = id_pos_for_player(all_stars_by_year)
 
-    # NEED TO BALANCE THE FUNCTION BELOW SO THAT IT ONLY INSERTS 25 at a time
-    insert_player_lookup_table(cur, conn, player_id_dict, player_position_dict)
+    # NEED TO BALANCE THE FUNCTION BELOW SO THAT IT ONLY INSERTS 25 at a time (done)
+    insert_player_lookup_table(cur, conn, player_id_dict, player_position_dict, 25)
 
     conn.close()
 

@@ -45,18 +45,6 @@ def make_avg_assists_vis(avg_assists_pos_dict, years):
     fig.update_layout(title = title_str, xaxis_tickangle = -45, barmode='group', xaxis = {'tickmode': 'linear'})
     fig.show()
 
-def ppg_for_players_in_2015_and_2020(cur):
-    cur.execute('''SELECT Player_Info.name, ((Info_2020.ppg + Info_2015.ppg) / 2) AS ppg_average FROM Player_Info 
-                JOIN Info_2020 ON Player_Info.id = Info_2020.id JOIN Info_2015 ON Info_2020.id = Info_2015.id ORDER BY ppg_average DESC LIMIT 5''')
-    res = cur.fetchall()
-    names, ppg_avg = zip(*res)
-    fig = go.Figure(
-        data = [go.Bar(x = names, y = ppg_avg)],
-        layout = dict(title = dict(text = 'Top 5 Players Appearing in Both 2015 and 2020 All-Star Game by PPG'))
-    )
-    fig.show()
-
-
 def games_played_across_years(cur):
     cur.execute('SELECT name, games_played FROM Info_2000')
     results_1995 = dict(cur.fetchall())
@@ -198,6 +186,113 @@ def games_played_across_years2(cur):
 
     plot.update_layout(barmode='stack', title='Top 5 Players by Total Games Played Across Years')
     plot.show()
+    
+def top_players_by_total_pts_and_ast_with_games_played(cur):
+    # Fetch total points, total assists, and total games played for each player across years
+    cur.execute("""
+        SELECT p.id, 
+               SUM(i.pts * i.games_played) as total_pts, 
+               SUM(i.ast * i.games_played) as total_ast,
+               SUM(i.games_played) as total_games_played
+        FROM (
+            SELECT id, pts, ast, games_played FROM Info_1995
+            UNION ALL
+            SELECT id, pts, ast, games_played FROM Info_2000
+            UNION ALL
+            SELECT id, pts, ast, games_played FROM Info_2005
+            UNION ALL
+            SELECT id, pts, ast, games_played FROM Info_2010
+            UNION ALL
+            SELECT id, pts, ast, games_played FROM Info_2015
+            UNION ALL
+            SELECT id, pts, ast, games_played FROM Info_2020
+        ) AS i
+        JOIN Player_Info AS p ON i.id = p.id
+        GROUP BY p.id
+    """)
+    total_results = cur.fetchall()
+
+    # Fetch player names corresponding to player ids
+    player_names = {}
+    cur.execute('SELECT id, name FROM Player_Info')
+    player_info_results = dict(cur.fetchall())
+    for player_id, player_name in player_info_results.items():
+        player_names[player_id] = player_name
+
+    # Calculate the total points, total assists, and total games played for each player
+    total_pts_dict = {}
+    total_ast_dict = {}
+    total_games_played_dict = {}
+    for player_id, total_pts, total_ast, total_games_played in total_results:
+        total_pts_dict[player_id] = total_pts
+        total_ast_dict[player_id] = total_ast
+        total_games_played_dict[player_id] = total_games_played
+
+    # Sort players by the sum of total points and total assists multiplied by total games played
+    sort_total_sum = sorted(total_pts_dict.items(), key=lambda t: (total_pts_dict[t[0]] + total_ast_dict[t[0]]) * total_games_played_dict[t[0]], reverse=True)
+
+    # Get top 5 player names and total sums
+    top_players = sort_total_sum[:5]
+    player_ids, total_sums = zip(*top_players)
+    player_names_top5 = [player_names.get(player_id, f"Unknown Player {player_id}") for player_id in player_ids]
+
+    # Create and show the combined bar plot for total points and total assists
+    plot_combined = go.Figure()
+
+    plot_combined.add_trace(go.Bar(
+        name='Total PTS',
+        x=player_names_top5,
+        y=[total_pts_dict[player_id] for player_id in player_ids],
+        offsetgroup=0
+    ))
+
+    plot_combined.add_trace(go.Bar(
+        name='Total AST',
+        x=player_names_top5,
+        y=[total_ast_dict[player_id] for player_id in player_ids],
+        offsetgroup=1
+    ))
+
+    plot_combined.update_layout(title='Top 5 Players by Total PTS and AST Across Years', barmode='stack')
+    plot_combined.show()
+    
+def total_pts_and_ast_comparison(cur):
+    # Fetch total points and total assists for all players across years
+    cur.execute("""
+        SELECT
+            year,
+            SUM(pts * games_played) as total_pts,
+            SUM(ast * games_played) as total_ast
+        FROM (
+            SELECT '1995' as year, pts, ast, games_played FROM Info_1995
+            UNION ALL
+            SELECT '2000' as year, pts, ast, games_played FROM Info_2000
+            UNION ALL
+            SELECT '2005' as year, pts, ast, games_played FROM Info_2005
+            UNION ALL
+            SELECT '2010' as year, pts, ast, games_played FROM Info_2010
+            UNION ALL
+            SELECT '2015' as year, pts, ast, games_played FROM Info_2015
+            UNION ALL
+            SELECT '2020' as year, pts, ast, games_played FROM Info_2020
+        )
+        GROUP BY year
+    """)
+    total_results = cur.fetchall()
+
+    # Extract years, total points, and total assists
+    years, total_pts, total_ast = zip(*total_results)
+
+    # Create a stacked bar chart
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(x=years, y=total_pts, name='Total Points', marker_color='blue'))
+    fig.add_trace(go.Bar(x=years, y=total_ast, name='Total Assists', marker_color='orange'))
+
+    fig.update_layout(barmode='stack', title='Comparison of Total Points and Total Assists Across Years')
+    fig.show()
+
+    
 
 
 def main():
@@ -212,12 +307,14 @@ def main():
     make_avg_assists_vis(avg_ast_pos_dict, years_for_ast_vis)
     
     
-
-    # Used to make top 5 all-star players by average points per game from 2015 and 2020 seasons
-    # ppg_for_players_in_2015_and_2020(cur)
-
     # Used to make top 5 playes by games played plot - stacked with amount of games played in each year [1995, 2000, 2005, 2010, 2015, 2020]
     games_played_across_years2(cur)
+    
+    top_players_by_total_pts_and_ast_with_games_played(cur)
+    
+    total_pts_and_ast_comparison(cur)
+    
+
     
     
 
