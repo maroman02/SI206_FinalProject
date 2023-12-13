@@ -1,9 +1,6 @@
 # Refer to Final Project Plan doc for guide
 # Used to collect players stats, both current and historical from https://www.balldontlie.io/home.html#introduction and to make visualizations
 
-import unittest
-import requests
-import os
 from DatabaseCreation import *
 import plotly.graph_objects as go
 

@@ -1,7 +1,5 @@
 
-import unittest
-import requests
-import os
+
 from DatabaseCreation import *
 import plotly.graph_objects as go
 

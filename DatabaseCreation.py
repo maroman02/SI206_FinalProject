@@ -1,4 +1,4 @@
-# Refer to Final Project Plan doc for guide
+# Creation of database
 
 import sqlite3
 import os
